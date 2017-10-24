@@ -15,6 +15,8 @@ namespace bse {
 			vector<vector<double> > books_grades_y();
 			vector<vector<double> > us_census_X();
 			vector<vector<double> > us_census_y();
+			vector<vector<double> > example_X();
+			vector<vector<double> > example_y();
 	};
 	
 	vector< vector<double> > Bases::height_shoes_X(){
@@ -802,6 +804,108 @@ namespace bse {
 		temp.clear();
 		
 		temp.push_back(281.4220);
+		result.push_back(temp);
+
+		return result;
+	};
+	
+	vector< vector<double> > Bases::example_X(){
+		vector< vector<double> > result;
+		vector<double> temp;
+		
+		temp.push_back(1);
+		temp.push_back(2.5);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(0.5);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(2.2);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(1.9);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(3.1);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(2.3);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(2);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(1);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(1.5);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1);
+		temp.push_back(1.1);
+		result.push_back(temp);
+		
+		return result;
+	};
+
+	vector< vector<double> > Bases::example_y(){
+		vector< vector<double> > result;
+		vector<double> temp;
+		
+		temp.push_back(2.4);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(0.7);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(2.9);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(2.2);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(3.0);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(2.7);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1.6);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1.1);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(1.6);
+		result.push_back(temp);
+		temp.clear();
+		
+		temp.push_back(0.9);
 		result.push_back(temp);
 
 		return result;

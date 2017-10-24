@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <math.h>
 #include <vector>
 #include "bases.h"
 using namespace std;
@@ -21,7 +22,13 @@ namespace tea {
 			vector< vector<double> > multiplicacao_valor(double valor, vector< vector<double> > mat);
 			vector< vector<double> > inversa(vector< vector<double> > mat);
 			vector< vector<double> > min_quadrado(vector< vector<double> > X, vector< vector<double> > y, bool quadratico = false );
-			vector< vector<double> > pca(vector< vector<double> > X, vector< vector<double> > y);
+			vector< vector<double> > exclude_first_col(vector< vector<double> > mat);
+			vector <double> data_mean(vector< vector<double> > X, vector< vector<double> > y);
+			vector< vector<double> > concatenate_col(vector< vector<double> > X, vector< vector<double> > y);
+			vector< vector<double> > covariance(vector< vector<double> > x_y);
+			vector <double> autovalores(vector< vector<double> > mat);
+			vector< vector<double> > pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col);
+			vector< vector<double> > autovetores(vector< vector<double> > mat, vector<double> autovalores);
 			
 	};
 	
@@ -50,6 +57,8 @@ namespace tea {
 						return bases.books_grades_X();
 					case 3:
 						return bases.us_census_X();
+					case 4:
+						return bases.example_X();
 					default:
 						cout << "Erro: Variável base_num está errada";
 				}
@@ -63,6 +72,8 @@ namespace tea {
 						return bases.books_grades_y();
 					case 3:
 						return bases.us_census_y();
+					case 4:
+						return bases.example_y();
 					default:
 						cout << "Erro: Variável base_num está errada";
 				}
@@ -336,14 +347,256 @@ namespace tea {
 	};
 	
 	
-	vector< vector<double> > Matrix::pca(vector< vector<double> > X, vector< vector<double> > y){
-		int lin = X.size(),
-			col = X[0].size();
-	    
-	    vector< vector<double> > inv;
-		inv = this->inversa(this->multiplicacao_matrizes(this->transposta(X), X));
+	vector< vector<double> > Matrix::exclude_first_col(vector< vector<double> > mat){
+		int lin = mat.size(),
+			col = mat[0].size();
+			
+		vector< vector<double> > result;
 		
-		return this->multiplicacao_matrizes(inv, this->multiplicacao_matrizes(this->transposta(X),y));
+		for (int i = 0; i < lin; i++){
+			vector <double> temp;
+			for (int j=0; j<col-1; j++){
+				temp.push_back(mat[i][j+1]);
+			}
+			result.push_back(temp);
+		}
+		
+		return result;
+	};
+	
+	
+	vector <double> Matrix::data_mean(vector< vector<double> > X, vector< vector<double> > y){
+		int lin_X = X.size(),
+			col_X = X[0].size(),
+			lin_Y = y.size(),
+			col_Y = y[0].size();
+		
+		double sum;
+		vector < double > mean;
+		for (int j=0; j<col_X; j++){
+			sum = 0;
+			for (int i=0; i<lin_X; i++)
+				sum += X[i][j];
+			mean.push_back(sum/lin_X);
+		}
+
+		for (int j=0; j<col_Y; j++){
+			sum = 0;
+			for (int i=0; i<lin_Y; i++)
+				sum += y[i][j];
+			mean.push_back(sum/lin_Y);
+		}
+		
+		return mean;
+	}
+	
+	vector< vector<double> > Matrix::concatenate_col(vector< vector<double> > X, vector< vector<double> > y){
+		int lin_X = X.size(),
+			col_X = X[0].size(),
+			lin_Y = y.size(),
+			col_Y = y[0].size();
+			
+		if (lin_X != lin_Y){
+			cout << "Erro: Nº de linhas das duas matrizes devem ser iguais";
+		}
+		
+		vector< vector<double> > result;
+		for (int i = 0; i < lin_X; i++){
+			vector<double> temp;
+	        for (int j = 0; j < col_X+col_Y; j++){
+	            temp.push_back(0);
+	        }
+	        result.push_back(temp);
+	    }
+	    
+	    for (int j = 0; j < result[0].size(); j++){
+	    	for (int i = 0; i < lin_X; i++){
+	    		if (j<col_X){
+	    			result[i][j] = X[i][j];
+				} else {
+	    			result[i][j] = y[i][j-col_X];
+				}
+			}
+		}
+		
+		return result;
+	}
+	
+	vector< vector<double> > Matrix::covariance(vector< vector<double> > x_y){
+		int lin = x_y.size(),
+			col = x_y[0].size();
+		
+		vector< vector<double> > result;
+		for (int i = 0; i < col; i++){
+			vector<double> temp;
+	        for (int j = 0; j < col; j++){
+            	double sum = 0;
+            	for (int k = 0; k<lin; k++){
+            		sum += (x_y[k][i])*(x_y[k][j]);
+				}
+				temp.push_back(sum/(lin-1));
+	        }
+	        result.push_back(temp);
+	    }
+	    
+	    return result;
+ 	}
+ 	
+ 	vector <double> Matrix::autovalores(vector< vector<double> > mat){
+		this->check_matrix_size(mat);
+		
+		int lin = mat.size(), 
+			col = mat[0].size();
+		
+		if (lin == 2 && col == 2){
+			double a = 1,
+				b = - (mat[0][0] + mat[1][1]),
+				c = mat[0][0]*mat[1][1] - (mat[0][1] * mat[1][0]);
+				
+			double delta = pow(b,2) - 4*a*c;
+			
+			vector <double> result;
+			
+			result.push_back((-b - sqrt(delta))/2*a);
+			result.push_back((-b + sqrt(delta))/2*a);
+			
+			return result;
+		}
+	
+		if (lin == 3 && col == 3){
+			// Pego ajuda do site https://goo.gl/KZJRq1
+			double a = 1,
+				b = - (mat[0][0]+mat[1][1]+mat[2][2]),
+				c = (mat[0][0]*mat[1][1]) + (mat[0][0]*mat[2][2]) + (mat[1][1]*mat[2][2]) - (mat[0][2]*mat[2][0]) - (mat[1][2]*mat[2][1]) - (mat[0][1]*mat[1][0]),
+				d = - (mat[0][0]*mat[1][1]*mat[2][2]) - (mat[0][1]*mat[1][2]*mat[2][0]) - (mat[0][2]*mat[1][0]*mat[2][1]) + (mat[0][2]*mat[1][1]*mat[2][0]) + (mat[0][0]*mat[1][2]*mat[2][1]) + (mat[0][1]*mat[1][0]*mat[2][2]);
+				
+			double r, q, s, discrim, dum1 ,term1, r13, t; 
+		    double x1, x2, x3; 
+		    double x11=0, x22=0, x33=0; 
+			
+			b /= a; 
+		    c /= a; 
+		    d /= a; 
+		     
+		    q = (3*c - (b*b))/9; 
+		    r = -(27*d) + b*(9*c - 2*(b*b)); 
+		    r /= 54; 
+		      
+		    discrim = q*q*q + r*r; 
+		    x1 = 0; //A primeira raiz é sempre real. 
+		    term1 = (b/3.0); 
+			
+			if (discrim > 0){ 
+		    	cout<<"\n\nO discriminante eh maior que zero\nRaizes imaginárias"; 
+			} else if (discrim == 0){ 
+			   	// Todas as raizes sao reais. 
+		       	r13 = (r < 0) ? -cbrt(-r) : cbrt(r); 
+		       	x1 = -term1 + 2.0*r13; 
+		       	x3 = x2 = -(r13 + term1); 
+				
+				vector <double> result;
+
+				result.push_back(x1);
+				result.push_back(x2);
+				result.push_back(x3);
+			
+				return result;			         
+				
+			} else if(discrim < 0) {
+				// Raizes sao reais e distintas (q < 0) 
+			    q = -q; 
+			    dum1 = q*q*q; 
+			    dum1 = acos(r/sqrt(dum1)); 
+			    r13 = 2.0*sqrt(q); 
+			    x1 = -term1 + r13*cos(dum1/3.0); 
+			    x2 = -term1 + r13*cos((dum1 + 2.0*M_PI)/3.0); 
+			    x3 = -term1 + r13*cos((dum1 + 4.0*M_PI)/3.0); 
+
+				vector <double> result;
+
+				result.push_back(x1);
+				result.push_back(x2);
+				result.push_back(x3);
+			
+				return result;		
+			} 			
+		};
+		
+		cout << "\n\nError: Erro no calculo dos autovalores";
+	 }
+	 
+	vector< vector<double> > Matrix::autovetores(vector< vector<double> > mat, vector<double> autovalores){
+		this->check_matrix_size(mat);
+		
+		int lin = mat.size(), 
+			col = mat[0].size();
+		
+		if (lin == 2 && col == 2){
+			double a = mat[0][0], b = mat[0][1], c = mat[1][0], d = mat[1][1];
+			
+			for (int i = 0; i<autovalores.size(); i++){
+				double lambda = autovalores[i];
+				
+				
+				
+				double temp = (d + e*y)
+			}
+		}
+	
+		if (lin == 3 && col == 3){
+					
+		};
+		
+		cout << "\n\nError: Erro no calculo dos autovetores";
+	}
+	
+	vector< vector<double> > Matrix::pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col){
+		
+		// 1. Get some data.
+		if (exclude_first_col==true)
+			X = this->exclude_first_col(X);
+			
+		vector <double> mean_vector = this->data_mean(X, y);
+
+		vector< vector<double> > x_y = this->concatenate_col(X, y);
+
+		int lin_x_y = x_y.size(),
+			col_x_y = x_y[0].size();
+
+		vector< vector<double> > new_x_y= x_y;
+		
+		// Subtract the mean.
+		for (int j=0; j<col_x_y; j++)
+			for (int i=0; i<lin_x_y; i++)
+				new_x_y[i][j] -= mean_vector[j];
+
+		// Calculate the covariance matrix
+		vector< vector<double> > covariance = this->covariance(new_x_y);
+		
+		// Calculate the eigenvectors and eigenvalues of the covariance matrix.
+		vector <double> autovalores = this->autovalores(covariance);
+		vector <double> autovetores = this->autovetores(covariance, autovalores);
+		
+		cout<<"\n\nTESTE\n";
+		for (int i = 0; i<autovalores.size();i++){
+			cout<<autovalores[i]<<"\t";
+		}
+		cout<<"\n\n";
+
+
+
+		return covariance;
+
+
+
+	    
+	    
+	    
+//	    
+//	    vector< vector<double> > inv;
+//		inv = this->inversa(this->multiplicacao_matrizes(this->transposta(X), X));
+//		
+//		return this->multiplicacao_matrizes(inv, this->multiplicacao_matrizes(this->transposta(X),y));
 	};
 	
 }
