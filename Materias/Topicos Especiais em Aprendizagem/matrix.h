@@ -27,7 +27,7 @@ namespace tea {
 			vector< vector<double> > concatenate_col(vector< vector<double> > X, vector< vector<double> > y);
 			vector< vector<double> > covariance(vector< vector<double> > x_y);
 			vector <double> autovalores(vector< vector<double> > mat);
-			vector< vector<double> > pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col);
+			void pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col);
 			vector< vector<double> > autovetores(vector< vector<double> > mat, vector<double> autovalores);
 			
 	};
@@ -400,14 +400,7 @@ namespace tea {
 			cout << "Erro: Nº de linhas das duas matrizes devem ser iguais";
 		}
 		
-		vector< vector<double> > result;
-		for (int i = 0; i < lin_X; i++){
-			vector<double> temp;
-	        for (int j = 0; j < col_X+col_Y; j++){
-	            temp.push_back(0);
-	        }
-	        result.push_back(temp);
-	    }
+		vector< vector<double> > result (lin_X, vector<double>(col_X+col_Y));
 	    
 	    for (int j = 0; j < result[0].size(); j++){
 	    	for (int i = 0; i < lin_X; i++){
@@ -533,24 +526,39 @@ namespace tea {
 		
 		if (lin == 2 && col == 2){
 			double a = mat[0][0], b = mat[0][1], c = mat[1][0], d = mat[1][1];
+			vector< vector<double> > result (2,vector<double>(2)); 
+
+			result[0][0] = 1;
+			result[1][0] = -c / (d-autovalores[0]);
+
+			result[0][1] = -b / (a-autovalores[1]);
+			result[1][1] = 1;
 			
-			for (int i = 0; i<autovalores.size(); i++){
-				double lambda = autovalores[i];
-				
-				
-				
-				double temp = (d + e*y)
-			}
+			return result;
 		}
 	
 		if (lin == 3 && col == 3){
-					
+			double a = mat[0][0], b = mat[0][1], c = mat[0][2], 
+				   d = mat[1][0], e = mat[1][1], f = mat[1][2], 
+				   g = mat[2][0], h = mat[2][1], i = mat[2][2];
+				   
+			vector< vector<double> > result (3,vector<double>(3)); 
+
+
+			for (int i=0; i<autovalores.size(); i++){
+
+				result[0][i] = (b*f - c*(e-autovalores[i]))/((e-autovalores[i]) * (a-autovalores[i]) - b*d);
+				result[1][i] = (-d*result[0][i] -f) / (e-autovalores[i]);
+				result[2][i] = 1;
+			}
+			
+			return result;
 		};
 		
 		cout << "\n\nError: Erro no calculo dos autovetores";
 	}
 	
-	vector< vector<double> > Matrix::pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col){
+	void Matrix::pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col){
 		
 		// 1. Get some data.
 		if (exclude_first_col==true)
@@ -575,28 +583,37 @@ namespace tea {
 		
 		// Calculate the eigenvectors and eigenvalues of the covariance matrix.
 		vector <double> autovalores = this->autovalores(covariance);
-		vector <double> autovetores = this->autovetores(covariance, autovalores);
+		vector< vector <double> > autovetores = this->autovetores(covariance, autovalores);
+
+		cout<<"\nMedias\n";
+		for (int i = 0; i<mean_vector.size();i++){
+			cout<<mean_vector[i]<<"\t";
+		}
+		cout<<"\n\n";
+
+		this->show_matrix(covariance, "Matrix de covariancia");
 		
-		cout<<"\n\nTESTE\n";
+		cout<<"\n\nAutovalores\n";
 		for (int i = 0; i<autovalores.size();i++){
 			cout<<autovalores[i]<<"\t";
 		}
 		cout<<"\n\n";
+		
+		this->show_matrix(autovetores, "Autovetores");
+		cout<<"\n\n";
 
+		this->show_matrix(this->multiplicacao_matrizes(covariance,autovetores), "Matrix de covariancia * Autovetores");
+		cout<<"\n\n";
 
-
-		return covariance;
-
-
-
-	    
-	    
-	    
-//	    
-//	    vector< vector<double> > inv;
-//		inv = this->inversa(this->multiplicacao_matrizes(this->transposta(X), X));
-//		
-//		return this->multiplicacao_matrizes(inv, this->multiplicacao_matrizes(this->transposta(X),y));
+		vector< vector<double> > temp = autovetores;
+		
+		for (int i = 0; i<temp.size(); i++){
+			for (int j = 0; j<temp[0].size(); j++){
+				temp[i][j] *= autovalores[j];
+			}
+		}
+		
+		this->show_matrix(temp, "Autovalores * Autovetores");
 	};
 	
 }
