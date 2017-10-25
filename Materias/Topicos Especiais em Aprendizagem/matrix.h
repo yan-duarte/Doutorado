@@ -516,7 +516,7 @@ namespace tea {
 		};
 		
 		cout << "\n\nError: Erro no calculo dos autovalores";
-	 }
+	}
 	 
 	vector< vector<double> > Matrix::autovetores(vector< vector<double> > mat, vector<double> autovalores){
 		this->check_matrix_size(mat);
@@ -560,7 +560,7 @@ namespace tea {
 	
 	void Matrix::pca(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col){
 		
-		// 1. Get some data.
+		// Get some data.
 		if (exclude_first_col==true)
 			X = this->exclude_first_col(X);
 			
