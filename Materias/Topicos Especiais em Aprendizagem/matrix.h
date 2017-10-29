@@ -2,6 +2,8 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
+#include <time.h>
+#include <algorithm>
 #include "bases.h"
 using namespace std;
 using namespace bse;
@@ -43,10 +45,52 @@ namespace tea {
 			vector< vector <double> > scatter_within_class(vector< vector< vector<double> > > vector_of_class, vector< vector<double> > class_mean);
 			vector< vector <double> > scatter_between_class(vector< vector< vector<double> > > vector_of_class, vector< vector<double> > class_mean, vector<double> sample_mean);
 			void lda(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col, int num_classes);
-			double distancia_euclidiana(vector<double> p1, vector<double> v2);
-			void kmeans(vector< vector<double> > mat, int k);
+			void mdf(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col, int num_classes);
+	};
+	
+	class Point{
+		private:
+			int id_point, id_cluster;
+			vector<double> values;
+			int total_values;
+			string name;
+		public:
+			Point(int id_point, vector<double>& values, string name = "");
+			int get_id();
+			void set_cluster(int id_cluster);
+			int get_cluster();
+			double get_value(int index);
+			int get_total_values();
+			void add_value(double value);
+			string get_name();
 	};
 
+	class Cluster{
+		private:
+			int id_cluster;
+			vector<double> central_values;
+			vector<Point> points;
+		public:
+			Cluster(int id_cluster, Point point);
+			void add_point(Point point);
+			bool remove_point(int id_point);
+			double get_central_value(int index);
+			void set_central_value(int index, double value);
+			Point get_point(int index);
+			int get_total_points();
+			int get_id();
+	};
+
+	class KMeans{
+		private:
+			int K; // number of clusters
+			int total_values, total_points, max_iterations;
+			vector<Cluster> clusters;
+			int get_id_nearest_center(Point point); // return ID of nearest center (uses euclidean distance)
+		public:
+			KMeans(int K, int total_points, int total_values, int max_iterations);
+			void run(vector<Point> & points);
+	};
 
 	vector< vector<double> > Matrix::get_base(int base_num, int x_or_y){
 		/* 
@@ -872,18 +916,26 @@ namespace tea {
 		vector <double> autovalores = this->autovalores(this->matrices_multiplication(this->inversa(Sw),Sb));
 		vector< vector <double> > autovetores = this->autovetores(this->matrices_multiplication(this->inversa(Sw),Sb), autovalores);
 	
-		cout<<"\n\nAutovalores\n";
+		this->show_matrix(Sw, "Sw");
+		cout<<"\n\n\n";
+		
+		this->show_matrix(this->inversa(Sw), "Sw^-1");
+		cout<<"\n\n\n";
+		
+		this->show_matrix(Sb, "Sb");
+		cout<<"\n\n\n";
+	
+		cout<<"Autovalores\n";
 		for (int i = 0; i<autovalores.size();i++){
 			cout<<autovalores[i]<<"\t";
 		}
-		cout<<"\n\n";
+		cout<<"\n\n\n";
 
 		this->show_matrix(autovetores, "Autovetores");
-		cout<<"\n\n";
-		
+		cout<<"\n\n\n";
 
 		this->show_matrix(this->matrices_multiplication(this->matrices_multiplication(this->inversa(Sw),Sb),autovetores), "(Sw^-1*Sb) * Autovetores");
-		cout<<"\n\n";
+		cout<<"\n\n\n";
 
 		vector< vector<double> > temp = autovetores;
 
@@ -896,28 +948,324 @@ namespace tea {
 		this->show_matrix(temp, "Autovalores * Autovetores");
 	};
 	
-//	void Matrix::mdf(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col, int num_classes){
-//		
-//	}
-	
-	double Matrix::distancia_euclidiana(vector<double> p1, vector<double> p2){
-		double result=0;
+	void Matrix::mdf(vector< vector<double> > X, vector< vector<double> > y, bool exclude_first_col, int num_classes){
+		if (exclude_first_col==true)
+			X = this->exclude_first_col(X);
+			
+		vector< vector < vector <double > > > classes_x = this->get_separated_classes(X, y, num_classes);
+
+		vector <double> sample_mean = this->data_mean(X);
+		vector< vector <double> > class_mean = this-> get_mean_of_classes(classes_x);
+		vector< vector <double> > Sb=this->scatter_between_class(classes_x, class_mean, sample_mean);
+		vector< vector <double> > Sw=this->scatter_within_class(classes_x, class_mean);
 		
-		for (int i = 0; i<p1.size(); i++){
-		    result += pow(p1[i]-p2[i], 2);
+		
+		
+		int lin = X.size(),
+			col = X[0].size();
+
+		vector< vector<double> > new_X = X;
+
+		// Subtract the mean.
+		for (int j=0; j<col; j++)
+			for (int i=0; i<lin; i++)
+				new_X[i][j] -= sample_mean[j];
+
+		// Calculate the covariance matrix
+		vector< vector<double> > covariance = this->covariance(new_X, false, new_X[0]);
+
+		// Calculate the eigenvectors and eigenvalues of the covariance matrix.
+		vector <double> autovalores_pca = this->autovalores(covariance);
+		vector< vector <double> > autovetores_pca = this->autovetores(covariance, autovalores_pca);
+		
+		cout<<"\nMedias\n";
+		for (int i = 0; i<sample_mean.size();i++){
+			cout<<sample_mean[i]<<"\t";
 		}
-		return sqrt(result);
-	}
+		cout<<"\n\n\n";
 
-	void Matrix::kmeans(vector< vector<double> > mat, int k){
-		vector<double> clusters(k);
+		this->show_matrix(class_mean, "Medias das classes");
+		cout<<"\n\n\n";
+		
+		this->show_matrix(covariance, "Matrix de covariancia");
 
-		//mt19937 mt_rand(time(0));
+		cout<<"\n\n\nAutovalores PCA\n";
+		for (int i = 0; i<autovalores_pca.size();i++){
+			cout<<autovalores_pca[i]<<"\t";
+		}
+		cout<<"\n\n\n";
+
+		this->show_matrix(autovetores_pca, "Autovetores PCA");
+		cout<<"\n\n\n";
+
+		this->show_matrix(this->matrices_multiplication(covariance,autovetores_pca), "Matrix de covariancia * Autovetores PCA");
+		cout<<"\n\n\n";
+
+		vector< vector<double> > temp = autovetores_pca;
+
+		for (int i = 0; i<temp.size(); i++){
+			for (int j = 0; j<temp[0].size(); j++){
+				temp[i][j] *= autovalores_pca[j];
+			}
+		}
+
+		this->show_matrix(temp, "Autovalores * Autovetores PCA");
+		cout<<"\n\n\n";
 		
-		//cout<<"\n\n"<<mt_rand()<<"\n\n";
+		vector <double> autovalores_lda = this->autovalores(this->matrices_multiplication(this->inversa(Sw),Sb));
+		vector< vector <double> > autovetores_lda = this->autovetores(this->matrices_multiplication(this->inversa(Sw),Sb), autovalores_lda);
 		
-		//https://github.com/felixduvallet/kmeans/blob/master/src/kmeans.cpp
-		//https://pt.wikipedia.org/wiki/Dist%C3%A2ncia_euclidiana
+		this->show_matrix(Sw, "Sw");
+		cout<<"\n\n\n";
+		
+		this->show_matrix(this->inversa(Sw), "Sw^-1");
+		cout<<"\n\n\n";
+		
+		this->show_matrix(Sb, "Sb");
+		cout<<"\n\n\n";
+	
+		cout<<"Autovalores LDA\n";
+		for (int i = 0; i<autovalores_lda.size();i++){
+			cout<<autovalores_lda[i]<<"\t";
+		}
+		cout<<"\n\n\n";
+
+		this->show_matrix(autovetores_lda, "Autovetores LDA");
+		cout<<"\n\n\n";
+
+		vector< vector <double> > temp_mdf;
+		
+		temp_mdf = this->matrices_multiplication(
+			this->inversa( this->matrices_multiplication(this->matrices_multiplication(this->transpose(autovetores_pca),Sw),autovetores_pca)),
+			this->matrices_multiplication(this->matrices_multiplication(this->transpose(autovetores_pca),Sb),autovetores_pca)
+		);
+		
+		this->show_matrix(
+			temp_mdf, 
+			"(P^T * Sw * P)^-1 * (P^T * Sb * P)");
+		cout<<"\n\n\n";
+	};
+
+	/********************************************************************
+	 *                     POINT class functions                        *
+	 ********************************************************************/
+	Point::Point(int id_point, vector<double>& values, string name)	{
+		this->id_point = id_point;
+		total_values = values.size();
+
+		for(int i = 0; i < total_values; i++)
+			this->values.push_back(values[i]);
+
+		this->name = name;
+		id_cluster = -1;
+	};
+
+	int Point::get_id()	{
+		return id_point;
+	};
+
+	void Point::set_cluster(int id_cluster)	{
+		this->id_cluster = id_cluster;
+	};
+
+	int Point::get_cluster()	{
+		return id_cluster;
+	};
+
+	double Point::get_value(int index)	{
+		return values[index];
+	};
+
+	int Point::get_total_values()	{
+		return total_values;
+	};
+
+	void Point::add_value(double value)	{
+		values.push_back(value);
+	};
+
+	string Point::get_name()	{
+		return name;
+	};
+
+
+	/********************************************************************
+	 *                    CLUSTER class functions                       *
+	 ********************************************************************/
+	Cluster::Cluster(int id_cluster, Point point){
+		this->id_cluster = id_cluster;
+
+		int total_values = point.get_total_values();
+
+		for(int i = 0; i < total_values; i++)
+			central_values.push_back(point.get_value(i));
+
+		points.push_back(point);
+	};
+
+	void Cluster::add_point(Point point){
+		points.push_back(point);
+	};
+
+	bool Cluster::remove_point(int id_point){
+		int total_points = points.size();
+
+		for(int i = 0; i < total_points; i++){
+			if(points[i].get_id() == id_point){
+				points.erase(points.begin() + i);
+				return true;
+			}
+		}
+		return false;
 	};
 	
+	double Cluster::get_central_value(int index){
+		return central_values[index];
+	};
+
+	void Cluster::set_central_value(int index, double value){
+		central_values[index] = value;
+	};
+
+	Point Cluster::get_point(int index){
+		return points[index];
+	};
+
+	int Cluster::get_total_points(){
+		return points.size();
+	};
+
+	int Cluster::get_id(){
+		return id_cluster;
+	};
+
+	/********************************************************************
+	 *                     KMEANS class functions                       *
+	 ********************************************************************/
+	int KMeans::get_id_nearest_center(Point point){
+		double sum = 0.0, min_dist;
+		int id_cluster_center = 0;
+
+		for(int i = 0; i < total_values; i++){
+			sum += pow(clusters[0].get_central_value(i) -
+					   point.get_value(i), 2.0);
+		}
+
+		min_dist = sqrt(sum);
+
+		for(int i = 1; i < K; i++){
+			double dist;
+			sum = 0.0;
+
+			for(int j = 0; j < total_values; j++)
+				sum += pow(clusters[i].get_central_value(j) - point.get_value(j), 2.0);
+
+			dist = sqrt(sum);
+
+			if(dist < min_dist){
+				min_dist = dist;
+				id_cluster_center = i;
+			}
+		}
+
+		return id_cluster_center;
+	};
+
+
+	KMeans::KMeans(int K, int total_points, int total_values, int max_iterations){
+		this->K = K;
+		this->total_points = total_points;
+		this->total_values = total_values;
+		this->max_iterations = max_iterations;
+	};
+
+	void KMeans::run(vector<Point> & points){
+		if(K > total_points)
+			return;
+
+		vector<int> prohibited_indexes;
+
+		// choose K distinct values for the centers of the clusters
+		for(int i = 0; i < K; i++){
+			while(true){
+				int index_point = rand() % total_points;
+
+				if(find(prohibited_indexes.begin(), prohibited_indexes.end(), index_point) == prohibited_indexes.end()){
+					prohibited_indexes.push_back(index_point);
+					points[index_point].set_cluster(i);
+					Cluster cluster(i, points[index_point]);
+					clusters.push_back(cluster);
+					break;
+				}
+			}
+		}
+
+		int iter = 1;
+
+		while(true){
+			bool done = true;
+
+			// associates each point to the nearest center
+			for(int i = 0; i < total_points; i++){
+				int id_old_cluster = points[i].get_cluster();
+				int id_nearest_center = get_id_nearest_center(points[i]);
+
+				if(id_old_cluster != id_nearest_center){
+					if(id_old_cluster != -1)
+						clusters[id_old_cluster].remove_point(points[i].get_id());
+
+					points[i].set_cluster(id_nearest_center);
+					clusters[id_nearest_center].add_point(points[i]);
+					done = false;
+				}
+			}
+
+			// recalculating the center of each cluster
+			for(int i = 0; i < K; i++){
+				for(int j = 0; j < total_values; j++){
+					int total_points_cluster = clusters[i].get_total_points();
+					double sum = 0.0;
+
+					if(total_points_cluster > 0){
+						for(int p = 0; p < total_points_cluster; p++)
+							sum += clusters[i].get_point(p).get_value(j);
+						clusters[i].set_central_value(j, sum / total_points_cluster);
+					}
+				}
+			}
+
+			if(done == true || iter >= max_iterations){
+				cout << "Break in iteration " << iter << "\n\n";
+				break;
+			}
+
+			iter++;
+		}
+
+		// shows elements of clusters
+		for(int i = 0; i < K; i++){
+			int total_points_cluster =  clusters[i].get_total_points();
+
+			cout << "Cluster " << clusters[i].get_id() + 1 << endl;
+			for(int j = 0; j < total_points_cluster; j++){
+				cout << "Point " << clusters[i].get_point(j).get_id() + 1 << ": ";
+				for(int p = 0; p < total_values; p++)
+					cout << clusters[i].get_point(j).get_value(p) << " ";
+
+				string point_name = clusters[i].get_point(j).get_name();
+
+				if(point_name != "")
+					cout << "- " << point_name;
+
+				cout << endl;
+			}
+
+			cout << "Cluster values: ";
+
+			for(int j = 0; j < total_values; j++)
+				cout << clusters[i].get_central_value(j) << " ";
+
+			cout << "\n\n";
+		}
+	};
 }

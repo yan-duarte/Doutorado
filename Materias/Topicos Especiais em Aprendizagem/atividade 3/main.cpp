@@ -11,46 +11,13 @@ int main(int argc, char** argv) {
 	vector< vector<double> > X;
 	vector< vector<double> > y;
 	
-//	// PCA do BD Height x Shoes size
-//	X = Matrix.get_base(0, 0);
-//	y = Matrix.get_base(0, 1);
-//	
-//	cout<<"\n*******Height x Shoes size*******\n";
-//	Matrix.pca(X, y, true);
-//
-//
-//	// PCA do BD Boiling point at the Alps
-//	X = Matrix.get_base(1, 0);
-//	y = Matrix.get_base(1, 1);
-//	
-//	cout<<"\n\n\n\n*******Boiling point at the Alps*******\n";
-//	Matrix.pca(X, y, true);
-//
-//
-//	// PCA do BD Books x Grades
-//	X = Matrix.get_base(2, 0);
-//	y = Matrix.get_base(2, 1);	
-//	
-//	cout<<"\n\n\n\n*******Books x Grades*******\n";
-//	Matrix.pca(X, y, true);
-//
-//
-//	// PCA do BD US Census
-//	X = Matrix.get_base(3, 0);
-//	y = Matrix.get_base(3, 1);
-//	
-//	cout<<"\n\n\n\n*******US Census*******\n";
-//	Matrix.pca(X, y, true);
-
-	// LDA do BD de Exemplo
+	// Iris dataset PCA / LDA / MDF test.
 	X = Matrix.get_base(5, 0);
 	y = Matrix.get_base(5, 1);	
 
-	cout<<"\n\n\n\n*******Exemplo*******\n";
-	Matrix.lda(X, y, true, 3);
-
+	cout<<"\n\n\n\n******* Iris DataSet (Sepal Width | Petal Length | Petal Width) *******\n";
+	Matrix.mdf(X, y, true, 3);
 		
-	cout<<"\n\n\n";
 	system("pause");
 	
 	return 0;
