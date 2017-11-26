@@ -122,7 +122,13 @@ namespace tea {
 					case 4:
 						return bases.example_X();
 					case 5:
-						return bases.iris_X();						
+						return bases.iris_X();	
+					case 6:
+						return bases.kmeans_example();
+					case 7:
+						return bases.seeds_X();
+					case 8:
+						return bases.lenses_X();
 					default:
 						cout << "Erro: Variável base_num está errada";
 				}
@@ -140,6 +146,10 @@ namespace tea {
 						return bases.example_y();
 					case 5:
 						return bases.iris_y();						
+					case 7:
+						return bases.seeds_y();
+					case 8:
+						return bases.lenses_y();
 					default:
 						cout << "Erro: Variável base_num está errada";
 				}
